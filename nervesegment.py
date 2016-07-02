@@ -9,6 +9,11 @@ import glob
 import cv2 as cv
 import numpy as np
 
+from keras.layers.core import Dense, Activation, Dropout
+from keras.models import Sequential
+from keras.layers import Convolution2D, Flatten, MaxPooling2D
+from keras.optimizers import SGD
+
 imgShapeY = 420
 imgShapeX = 580
 reshapeFactor = 0.25
@@ -37,7 +42,7 @@ def loadTrainData():
         
     return (trainImgs, trainSegs)
     
-def rle_encode(img):
+def rleEncode(img):
     prevVal = 0
     count = 0
     
@@ -62,6 +67,31 @@ def rle_encode(img):
         rleString += str(px[0]) + ' ' + str(px[1]) + ' '
     return rleString
     
+def isNotEmpty(listOfImgs):
+    return [np.sum(img) > 10 for img in listOfImgs]
+    
+def createKerasModel1():
+    model = Sequential()
+    
+    model.add(Convolution2D(4, 3, 3, border_mode='same', init='glorot_uniform', input_shape=(1, 105, 145)))
+    model.add(Activation('relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.10))
+    
+    model.add(Convolution2D(4, 3, 3, border_mode='same', init='glorot_uniform', input_shape=(1, 105, 145)))
+    model.add(Activation('relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.10))
+    
+    model.add(Flatten())
+    model.add(Dense(2))
+    model.add(Activation('softmax'))
+    
+    sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(optimizer=sgd, loss='categorical_crossentropy')
+    
+    return model  
+    
                 
         
     
@@ -69,10 +99,21 @@ def rle_encode(img):
 if __name__ == "__main__":
     print('Hello')
     
-    import time
-    startTime = time.time()
-    (trainImgs, trainSegs) = loadTrainData()
-    loadTime = time.time() - startTime
+#    import time
+#    startTime = time.time()
+#    (trainImgs, trainSegs) = loadTrainData()
+#    loadTime = time.time() - startTime
+#    
+#    print 'Took', loadTime, 'secs to load the training data'
     
-    print 'Took', loadTime, 'secs to load the training data'
+#    isMaskPresent = isNotEmpty(trainSegs)
+#    
+#    print 'Mask is present in', float(np.sum(isMaskPresent)*100)/float(len(isMaskPresent)), '% of the training data'
+    
+    # Predict if mask is present
+    model1 = createKerasModel1()
+    from keras.utils.visualize_util import plot
+    plot(model1, to_file='model.png')
+    
+    
 
